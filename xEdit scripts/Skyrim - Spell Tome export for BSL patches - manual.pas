@@ -1,21 +1,7 @@
 ﻿{
   Export spell tomes data needed for Better Spell Learning patching into a csv file (comma separated, values in double quotes ["]).
-  For use with the import script.
-  
-  0. Copy the .pas files into your xEdit/Edit Scripts folder.
-  1. Select the spell tomes you want to patch in the original mod (you can select all books, the script will only export Spell Tomes)
-        Right-click, Apply script and select this script.
-  2. Open the exported .csv file and clean up the CNAM descriptions and save.
-  3. Open the file in a text editor to make sure that all fields containing spaces are in double quotes and that quotes within text are escaped (" => ""). 
-  4. Select the tomes in the mod (this time just the tomes), right-click and Copy as override into a new .esp file.
-  5. Right-click the new mod and Add masters - Add Skyrim, Update, Dragonborn, Dawnguard and Better Spell Learning.
-  6. Right-click the new mod and Sort masters.
-  7. Copy form ID from one of Better Spell Learning tomes.
-  8. Select the tomes in the new mod, right-click, Apply script and select Skyrim - Copy VMAD subrecord. Paste the copied FormID. 
-        If you get an error, check the original mod's dependencies and add the missing masters. Sort after adding.
-  9. With the tomes selected, right-click, Apply script and select the import script. Select the prepared file.
-  10. Right-click the new mod and Clean masters
-  11. Save.
+  Meant for overview of original tomes and manual updates. Includes all fields and a EDID for identification of the record.
+  Not for use with the import script
 }
 unit UserScript;
 
@@ -31,7 +17,7 @@ unit UserScript;
             Result := 0;
             
             slBooks := TStringList.Create;
-            slBooks.Add('"FormID","difficulty","LearnSpell","School","SpellLearned","ThisBook","CNAM"');
+            slBooks.Add('"FormID","EDID","difficulty","LearnSpell","School","SpellLearned","ThisBook","DESC","Learned Spell Flag","Type Flag","Skill Flag","CNAM"');
                
         end;
 
@@ -52,6 +38,8 @@ unit UserScript;
                 Exit;
 
             // Get spell record referenced by the book
+            // Both Spell and later Effect select the "winning override".
+            // This should assure that the description and minimum level are taken from patches and mods modifying them further in the load order.
             SpellRecord := WinningOverride(RecordByFormID(GetFile(e), GetElementNativeValues(e, 'DATA\Spell'), false));
             
             // Get Spell effects record for DNAM (description - for CNAM of the book), difficulty and school
@@ -66,6 +54,7 @@ unit UserScript;
                 dnam := GetElementEditValues(EffectRecord, 'DNAM');
                 difficulty := GetElementEditValues(EffectRecord, 'Magic Effect Data\DATA\Minimum Skill Level');
                 school := GetElementEditValues(EffectRecord, 'Magic Effect Data\DATA\Magic Skill');
+                AddMessage(IntToStr(i) + ' : ' + school + ' : ' + IntToStr(difficulty) + ' : ' + dnam);
                 i := i + 1;
             until (dnam <> '') or (i >= ec);
                 
@@ -74,12 +63,17 @@ unit UserScript;
 
             // FixedFormID depends only on explicit masters and not affected by plugin's load order
             slValues.Add('[' + IntToHex(FixedFormID(e), 8) + ']');
+            slValues.Add(GetElementEditValues(e, 'EDID'));
             slValues.Add(difficulty);
             slValues.Add(GetElementEditValues(SpellRecord, 'FULL - Name'));
             slValues.Add(UpperCase(school));
             slValues.Add('[' + IntToHex(FixedFormID(SpellRecord), 8) + ']');
             // Second time just to keep the order
             slValues.Add('[' + IntToHex(FixedFormID(e), 8) + ']');
+            slValues.Add(GetElementEditValues(e, 'DESC'));
+            slValues.Add('0');
+            slValues.Add('Book/Tome');
+            slValues.Add('None');
             slValues.Add(dnam);
 
             // Add the record to list
